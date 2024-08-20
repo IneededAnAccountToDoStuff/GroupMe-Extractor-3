@@ -6,4 +6,4 @@ I got annoyed at the fact that GroupMe's export data does not grab the messages 
 ## Getting your API token.
 Visit https://dev.groupme.com/
 
-The source code asks you for your token every time. If you use this regularly, I'd recommend editing the .py file with your token.
+The python script asks you for your token every time. If you use this regularly, I'd recommend editing the .py file with your token.
