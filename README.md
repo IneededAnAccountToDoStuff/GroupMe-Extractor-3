@@ -7,3 +7,9 @@ I got annoyed at the fact that GroupMe's export data does not grab the messages 
 Visit https://dev.groupme.com/
 
 The python script asks you for your token every time. If you use this regularly, I'd recommend editing the .py file with your token.
+
+## How does this work?
+This script is based off the [GroupMe API](https://dev.groupme.com/docs/v3). It requests the list of all your chats, then extracts the messages for each chat, extracting topic messages along the way. It then searches the attachments, and extracts them. All of this is packed up into a nice little zip file.
+
+## Is this safe?
+Yes. It uses the official GroupMe API, and the data stays local. At no point does any data pass through anything but your computer and GroupMe unencrypted.
