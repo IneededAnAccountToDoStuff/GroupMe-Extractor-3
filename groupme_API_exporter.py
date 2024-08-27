@@ -1,7 +1,33 @@
+import tkinter
+
+root=tkinter.Tk()
+root.title('GroupMe Extractor')
+tokenholder=tkinter.Frame()
+tokenholder.pack(fill='x')
+tkinter.Label(tokenholder,text='Token:').pack(side='left',fill='x',expand=1)
+tokenask=tkinter.StringVar()
+tokenin=tkinter.Entry(tokenholder,textvariable=tokenask);tokenin.pack(side='left',fill='x',expand=1)
+QQ=tkinter.BooleanVar(value=1)
+attachask=tkinter.Checkbutton(text='Attachments',variable=QQ)
+attachask.pack()
+tkinter.Button(text='Go!',command=root.destroy).pack(fill='x')
+root.mainloop()
+getattachmentsflag=QQ.get()
+print('Get attachments'if getattachmentsflag else"No Attachments")
+GPtoken=tokenask.get()
+#If you use this often, I'd recommend replacing this with your token, obfuscated(so can't be stolen at a glance (e.g. bytes((2*40,111-10,11+55+35,99+8,665-568,2*49,37*3*1,3*101-2*96,78+22-67)).decode() )).
+def error(text:str):a=tkinter.Tk();a.title('Error');tkinter.Label(text=text).pack(fill='both',expand=1);a.mainloop();raise SystemExit()
+if GPtoken.strip()=="":error('You must give a token. Find yours at https://dev.groupme.com/')
+
 import json,urllib.request
-GPtoken=input('GroupMe API Token(find at https://dev.groupme.com/)>')#No, you don't get my token. I'd recommend replacing this with your token, obfuscated(so can't be stolen at a glance (e.g. bytes((2*40,111-10,11+55+35,99+8,665-568,2*49,37*3*1,3*101-2*96,78+22-67)).decode() )).
 def queryURL(url):return json.loads(urllib.request.urlopen(url).read())['response']
-groups=queryURL(f"https://api.groupme.com/v3/groups?token={GPtoken}")
+try:groups=queryURL(f"https://api.groupme.com/v3/groups?token={GPtoken}")
+except urllib.error.HTTPError as err:
+    ec=err.code
+    if ec==401:C='Unauthorised, probably a token error'
+    elif ec==404:C="Something weird's going on"
+    else:C="Don't know what's wrong."
+    error(f'Something went wrong with the intial fetch - {ec}: {C}')
 def parsegroupdata(chat):groupIDnameMap[chat['id']]=chat['name'];return{'name':chat['name'],'subtopics':chat['children_count'],'members':(*(((f'⌊{n}⌋{r[len(n):]}'if R.startswith(N)else f"⌊{n}⌋ AKA ⌊{r}⌋")if N!=R else n,c)for n,r,N,R,c in((a,b,a.casefold(),b.casefold(),c)for a,b,c in((a['nickname'],a['name'],a['id'])for a in chat['members']))),)}
 def getGroupFromID(id):return queryURL(f"https://api.groupme.com/v3/groups/{id}?token={GPtoken}")
 def querygroupidmessages(groupID):
@@ -22,30 +48,25 @@ def querygroupmsgWtopics(group):return querygroupIDmsgWtopics(group["id"])
 def packagegroupdata(group):return(parsegroupdata(group),(*(formattopicmessages(i)for i in querygroupmsgWtopics(group).items()),))
 def formattopicmessages(msg):msgn,msg=msg;name=groupIDnameMap[msgn];return(name,msg)if isinstance(msg,str)else(name,(*({'name':'SYSTEM>'if i['user_id']=='system'else i['name'],"id":i['id'],'time':i['created_at'],'text':i['text'],'attachments':i['attachments']}for i in msg),))
 def totime(time):import datetime;return datetime.datetime.fromtimestamp(time,datetime.UTC).astimezone().strftime('%H:%M:%S on %Y/%m/%d')
-def displaygroupmessages(msg):
-    name,msg=msg;print(f'\tGroup/Topic Name: {name}\n\tCount: {len(msg)}')
-    if isinstance(msg,str):print(msg);return
-    for i in msg:
-        print(f'\t\t{i['name']} at {totime(i['time'])}: {i["text"]}')
-        if i['attachments']:print(f'\t\t\t⎙ Attachments:{i['attachments']}')
-        print()
-result=[]
-for group in groups:
-    gdata=packagegroupdata(group);result.append(gdata);print(gdata[0])
-    for j in gdata[1]:displaygroupmessages(j)
-    print();print()
+result=[packagegroupdata(group)for group in groups]
 
 def getattachments(jsondat):return(e for i in jsondat for sl in i[1]for s in sl[1]if isinstance(s,dict)for e in s['attachments'])
 def saveform(result,outpath='groupme.zip'):
-    import zipfile#,io
-    with open(outpath,'w'):pass#zip_buffer=io.BytesIO()
+    import zipfile
+    with open(outpath,'w'):pass
     with zipfile.ZipFile(outpath,"a",zipfile.ZIP_DEFLATED)as zip_file:
-        zip_file.writestr('main.json',json.dumps(result,separators=(',',':')));manifest={};count=0
-        for attachment in getattachments(result):
-            if attachment['type']=='mentions'or'reply'==attachment['type']:continue
-            pastr=f'attachment_{count}';zip_file.writestr(pastr,urllib.request.urlopen(attachment['url']).read());manifest[pastr]=attachment;count+=1
-        zip_file.writestr('attachment_manifest.json',json.dumps(manifest,separators=(',',':')))
-    #with open(outpath,'bw')as f:f.write(zip_buffer.getbuffer())
-path=f'groupme_{int(time.time())}.zip';import time
+        zip_file.writestr('main.json',json.dumps(result,separators=(',',':')))
+        if getattachmentsflag:
+            manifest={};count=0
+            for attachment in getattachments(result):
+                if attachment['type']=='mentions'or attachment['type']=='location'or'reply'==attachment['type']:continue
+                if attachment['type']=='charmap':print('\nCharmap - skipping');continue
+                if attachment['type']=='emoji':print('\nEmoji attachment - skipping');continue
+                if attachment['type']=='split':print('\nMoney Split - skipping');continue
+                if'url'not in attachment:print(f'Attachment {repr(attachment)} is not understood');continue
+                try:pastr=f'attachment_{count}';zip_file.writestr(pastr,urllib.request.urlopen(attachment['url']).read());manifest[pastr]=attachment;count+=1
+                except(urllib.error.URLError,ValueError,urllib.error.HTTPError):print(f'\nError getting {attachment=}')
+            zip_file.writestr('attachment_manifest.json',json.dumps(manifest,separators=(',',':')))
+import time;path=f'groupme_{int(time.time())}.zip'
 print('Generating .zip file to store data.');print('Saving-',end='',flush=1);saveform(result,path);print('\rSaved  ')
 print('#TODO: save attachments with proper extensions.')
