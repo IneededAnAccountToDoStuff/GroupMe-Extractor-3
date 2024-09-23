@@ -12,4 +12,6 @@ The python script asks you for your token every time. If you use this regularly,
 This script is based off the [GroupMe API](https://dev.groupme.com/docs/v3). It requests the list of all your chats, then extracts the messages for each chat, extracting topic messages along the way. It then searches the attachments, and extracts them. All of this is packed up into a nice little zip file.
 
 ## Is this safe?
-Yes. It uses the official GroupMe API, and the data stays local. At no point does any data pass through anything but your computer and GroupMe unencrypted.
+For the data passing through, yes. It uses the official GroupMe API, and the data stays local. At no point does any data pass through anything but your computer and GroupMe unencrypted. Unless you don't trust GroupMe, or your browser, or your computer... anyhow, it's as safe as using your browser.
+
+This program doesn't do authentication though. So it may be possible for someone to spoof? I don't really know, not my field of expertise. I may try to fix this later.
